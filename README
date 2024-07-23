@@ -1,0 +1,131 @@
+                        PicoRV32 SoC
+			Grug Huhler
+
+This directory contains a simple SoC that uses the RISC-V (32-bit)
+soft core from https://github.com/YosysHQ/picorv32.  File picorv32.v
+is from there, unchanged.  It is the core.
+
+The project uses the license-free educational version of the Gowin FPGA
+designer IDE and tool chain.  See https://www.gowinsemi.com/en/ and register
+for an account.  Login and look for "Gowin EDA" under Products.  Get
+the educational version, not the standard version.
+
+Both the Tang Nano 9K and the Tang Nano 20K low-cost FPGA development
+boards are supported.  Each has its own IDE project file, but many of
+the Verilog files (including top.v) are shared between the projects,
+sometimes using conditional compilation.
+
+Quick Start
+-----------
+
+The git has Verilog files that contain prebuilt software.  Look at
+src/global_defs.v to see which board the build is for.  If it is
+not your board, you will have to rebuild the software.
+
+For the Tang Nano 9K, you should be able to just build and run the
+Verilog.  The Tang Nano 20K is a little more complicated due to its
+more flexible clock source.  See below.
+
+Components
+----------
+
+File top.v is the top level module and integrates the SoC's
+components which are:
+
+* The RISC-V core (PicoRV32).
+* SRAM controller.
+* Adjustable amount of SRAM memory. See c_code/Makefile.  Default
+* size may be as low as 8192 bytes, but you can increase it.
+* Single clock used, speed adjustable via the Gowin rPLL.  See
+  c_code/Makefile.
+* A small reset controller.
+* A UART (wrapper around the simpleuart from
+  https://github.com/YosysHQ/picorv32).
+* An LED driver that supports reads and writes to the 6 standard LEDs on the
+  Tang Nano9K and TangNano20K.
+* A 32-bit count-down timer that can be read and written.
+  It counts down to zero and stops.
+* A Gowin user flash controller implemented two ways:
+  - uflash.v uses the Gowin user flash controller soft
+    IP block.  Clock speed limit = 50 MHz.
+  - uflash_controller.v is a controller that I wrote. Clock
+    speed limit = 40 MHz.
+  You can use either controller. Just enable one of them using
+  the Gowin GUI.  uflash.v is faster, especially for slow
+  clock speeds.  I tested both with clocks speeds of 5.4 and
+  40.5 MHz (the latter being a slight overclocking for uflash.v).
+  Note that only the Tang Nano 9K contains the user flash.
+* A controller for the ws2812b "neopixel" RGB LED that is only
+  only on the Tang Nano 20K
+
+Both the Verilog and the C code in this project are intended to be very
+simple and direct.  There are no integration abstractions.  The hope
+is that the project is relatively easy to understand completely, and easy
+to add to.  Peripheral modules preset a uniform interface based on the
+PicoRV32 standard memory interface bus document at the PicoRV website
+mentioned above.
+
+Some Hardare Topics
+-------------------
+
+S1 is the reset button.  Serial port: 115200, no parity, no flow control.
+The serial port is provided over the same USB port that powers the FPGA
+board and allows it to be programmed.  At least for Linux, the needed
+USB serial driver is already present.  I am not sure about Windows.  I
+installed no special driver, but may have installed a compatible driver
+at some point in the past.
+
+The project requires a 27 MHz input clock to the rPLL.  On the Tang
+Nano 9K, this comes from a 27 MHz can oscillator on pin 52.
+
+On the Tang Nano 20K, the clock comes from the external clock
+generator on pin 10.  You must configure the generator to be 27
+Mhz. See video: https://youtu.be/I-N0brdlzzk
+
+YouTube Videos
+---------------
+
+See https://www.youtube.com/@electronics.tinker/videos for many videos
+about these FPGA boards. The site has a PicoRV32 playlist.
+
+First video about PicoRV32: https://youtu.be/cq7ETOCPIBM.  See this
+for some installation and getting started tools.  Be aware that
+Gowin sometimes updates the toolchain.  I suggest using the latest.
+
+On Linux (Ubuntu 22.04), I use openFPGALoader for loading the bitstream
+file onto the FPGA.  See that first video.
+
+Software
+---------
+
+Directory c_code contains software to run on the SoC.  See the README
+there.  The software makefile generates some Verilog files that support
+parameterization and conditional compilation of the main Verilog modules.
+Some Verilog configration is done in the software's Makefile.  Look at
+that Makefile.
+
+In particular, the software build process creates Verilog SRAM block
+initialization files.  That's how the software gets onto the FPGA.  I
+have not created a serial or USB loader.  You must build the software and
+then rebuild the FPGA bitfile when you change the software.
+
+github and branches
+-------------------
+
+This project is hosted on github at
+
+https://github.com/grughuhler/picorv32_tang_nano_unified
+
+You will find all needed Gowin projects files and software source files.
+
+Look for tags that indicate later releases, often associated with a
+YouTube video.
+
+For older versions, I have used this repositories (and branches on
+them):
+
+  https://github.com/grughuhler/picorv32
+  https://github.com/grughuhler/picorv32_tang_nano_20k
+  
+I suggest avoiding these unless trying to replicate particular things from
+older videos.

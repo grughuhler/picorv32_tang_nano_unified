@@ -1,0 +1,53 @@
+This directory contains a simple C program that runs on the
+picorv32 core on the simple SoC.
+
+The build environment is limited. Some things to know:
+
+* BSS (data not explicitly initialized) is NOT set to zero.
+* No standard library functions are available.
+* It's possible I missed some section type in the linker
+  command file.
+* The SoC has little SRAM so programs cannot be large.  See Makefile
+  for setting the memory size.  The Tang Nano 20K supports 65536 bytes.
+  The Tang Nano 9K supports only 32768.
+
+I develop on Linux.  When using Windows, I use Windows subsytem for
+Linux (WSL2) on Windows.  This also simplifes getting the needed
+risc-v toolchain available on a Windows machine.
+
+You will need the gcc cross compiler for riscv.  On Ubuntu 22.04,
+
+  sudo apt install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
+
+The makefile may require gnumake.  I am not sure!
+
+The sofware build process also creates some Verilog files, and these
+have the same names regardless of which Gowin IDE project you are
+working with, the one for Nano 9K or the one for the Nano 20K.
+
+This means that when you switch which board you are working on, you
+must rebuild the software.  Enter
+
+   make clean
+
+and then
+
+  make 9k
+
+or
+
+  make 20k
+
+You can then build the FPGA bitfile using the Gowin IDE.
+
+The Makefile in this directory controls several project parameters.  Look
+at the comments in the Makefile.  The parameters include SRAM memory size
+and the system clock speed.
+
+Hints:
+
+  riscv64-unknown-elf-objdump -d prog.elf will disassemble the code.
+
+  riscv64-unknown-elf-objdump -x prog.elf shows sections and addresses.
+
+  riscv64-unknown-elf-nm --numeric-sort shows symbols and addresses.
