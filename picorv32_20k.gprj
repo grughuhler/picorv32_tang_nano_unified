@@ -6,6 +6,7 @@
     <Device name="GW2AR-18C" pn="GW2AR-LV18QN88C8/I7">gw2ar18c-000</Device>
     <FileList>
         <File path="src/countdown_timer.v" type="file.verilog" enable="1"/>
+        <File path="src/edge_finder.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_rpll_20k/gowin_rpll.v" type="file.verilog" enable="1"/>
         <File path="src/leds.v" type="file.verilog" enable="1"/>
         <File path="src/picorv32.v" type="file.verilog" enable="1"/>
@@ -19,5 +20,6 @@
         <File path="src/ws2812b_tgt.v" type="file.verilog" enable="1"/>
         <File path="src/picorv32_20k.cst" type="file.cst" enable="1"/>
         <File path="src/picorv32_20k.sdc" type="file.sdc" enable="1"/>
+        <File path="src/picorv32_20k.rao" type="file.gao" enable="0"/>
     </FileList>
 </Project>

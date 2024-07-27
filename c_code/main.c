@@ -18,6 +18,14 @@
 #error "BOARD NOT PROPERLY DEFINED.  Try make clean; make 9k|10k"
 #endif
 
+extern unsigned int timer_instr(unsigned int val);   /* from startup.S */
+extern unsigned int maskirq_instr(unsigned int val); /* from startup.S */
+
+unsigned int timer_irq_count;
+unsigned int illegal_irq_count;
+unsigned int buserr_irq_count;
+unsigned int irq3_count;
+
 #define MEMSIZE 512
 unsigned int mem[MEMSIZE];
 unsigned int test_vals[] = {0, 0xffffffff, 0xaaaaaaaa, 0x55555555, 0xdeadbeef};
@@ -303,6 +311,11 @@ void help(void)
   uart_puts("rc            : read clock low\r\n");
   uart_puts("rd            : read clock hi:low\r\n");
   uart_puts("he            : print help\r\n");
+  uart_puts("bi            : cause bus error\r\n");
+  uart_puts("ii            : cause illegal instruction\r\n");
+  uart_puts("mi            : set IRQ mask\r\n");
+  uart_puts("pi            : print IRQ count\r\n");
+  uart_puts("ti            : set timer to val\r\n");
 #if defined(BOARD_20K)
   uart_puts("sn            : set ws2812b LED\r\n");
 #endif
@@ -370,6 +383,77 @@ void change_ws2812b(unsigned int value)
 }
 #endif
 
+unsigned int *irq(unsigned int *regs, unsigned int irqs)
+{
+  if ((irqs & 1) != 0) {
+    timer_irq_count++;
+  }
+
+  if ((irqs & 2) != 0) {
+    illegal_irq_count++;
+  }
+
+  if ((irqs & 4) != 0) {
+    buserr_irq_count++;
+  }
+
+  if ((irqs & 8) != 0) {
+    irq3_count++;
+  }
+
+  return regs;
+}
+
+void print_irq_counts(void)
+{
+  uart_puts("timer: ");
+  uart_print_hex(timer_irq_count);
+  uart_puts("\r\nillegal: ");
+  uart_print_hex(illegal_irq_count);
+  uart_puts("\r\nbus error: ");
+  uart_print_hex(buserr_irq_count);
+  uart_puts("\r\nIRQ3: ");
+  uart_print_hex(irq3_count);
+  uart_puts("\r\n");
+}
+
+void do_timer_instr(unsigned int val)
+{
+  unsigned int old_val;
+
+  old_val = timer_instr(val);
+  uart_puts("old value was ");
+  uart_print_hex(old_val);
+  uart_puts("\r\n");
+}
+
+void do_maskirq_instr(unsigned int val)
+{
+  unsigned int old_val;
+
+  old_val = maskirq_instr(val);
+  uart_puts("old value was ");
+  uart_print_hex(old_val);
+  uart_puts("\r\n");
+}
+
+void illegal(void)
+{
+  asm volatile ("unimp"); /* Illegal instruction */
+}
+
+void buserr(void)
+{
+  int x, v;
+  int *p = &x;
+
+  /* If the compiler detects a misaligned access, it breaks it into a
+     sequence of smaller aligned accesses so I use an asm to force a
+     misaligned short read */
+  asm volatile ("lh %[rd], 1(%[rs])" : [rd] "=r" (v) : [rs] "r" (p));
+}
+
+
 /* struct command lists available commands.  See function help.
  * Each function takes one or two arguments.  The table below
  * contains a pointer to the function to call for each command.
@@ -400,6 +484,11 @@ struct command {
   {"rc", 0, .u.func0=read_clock},
   {"rd", 0, .u.func0=read_clock_ll},
   {"he", 0, .u.func0=help},
+  {"bi", 0, .u.func0=buserr},
+  {"ii", 0, .u.func0=illegal},
+  {"mi", 1, .u.func1=do_maskirq_instr},
+  {"pi", 0, .u.func0=print_irq_counts},
+  {"ti", 1, .u.func1=do_timer_instr},
 #if defined(BOARD_20K)
   {"sn", 1, .u.func1=change_ws2812b},
 #endif
@@ -512,6 +601,12 @@ int main()
   unsigned int len;
   
   set_leds(6);
+
+  timer_irq_count = 0;
+  illegal_irq_count = 0;
+  buserr_irq_count = 0;
+  irq3_count = 0;
+  
   la_wtest(); /* Could delete these.  They produce transactions that are */
   la_rtest(); /* nice to view on a logic analyzer. */
 

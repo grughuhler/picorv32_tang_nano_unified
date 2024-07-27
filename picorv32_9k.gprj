@@ -6,6 +6,7 @@
     <Device name="GW1NR-9C" pn="GW1NR-LV9QN88PC6/I5">gw1nr9c-004</Device>
     <FileList>
         <File path="src/countdown_timer.v" type="file.verilog" enable="1"/>
+        <File path="src/edge_finder.v" type="file.verilog" enable="1"/>
         <File path="src/force_rebuild.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_flash_controller/gowin_flash_controller.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_rpll_9k/gowin_rpll.v" type="file.verilog" enable="1"/>

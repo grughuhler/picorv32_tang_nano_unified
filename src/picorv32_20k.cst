@@ -1,11 +1,11 @@
-//Copyright (C)2014-2023 Gowin Semiconductor Corporation.
+//Copyright (C)2014-2024 Gowin Semiconductor Corporation.
 //All rights reserved. 
 //File Title: Physical Constraints file
-//GOWIN Version: 1.9.9 Beta-4 Education
+//Tool Version: V1.9.9.03 Education (64-bit)
 //Part Number: GW2AR-LV18QN88C8/I7
 //Device: GW2AR-18
 //Device Version: C
-//Created Time: Sun 06 02 11:10:01 2024
+//Created Time: Fri 07 26 16:23:03 2024
 
 IO_LOC "leds[5]" 20;
 IO_PORT "leds[5]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
@@ -19,12 +19,14 @@ IO_LOC "leds[1]" 16;
 IO_PORT "leds[1]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
 IO_LOC "leds[0]" 15;
 IO_PORT "leds[0]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
-IO_LOC "ws2812b_din" 79;
-IO_PORT "ws2812b_din" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
 IO_LOC "uart_tx" 69;
 IO_PORT "uart_tx" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+IO_LOC "ws2812b_din" 79;
+IO_PORT "ws2812b_din" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
 IO_LOC "uart_rx" 70;
 IO_PORT "uart_rx" IO_TYPE=LVCMOS33 PULL_MODE=NONE PCI_CLAMP=OFF BANK_VCCIO=3.3;
+IO_LOC "button2" 87;
+IO_PORT "button2" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
 IO_LOC "reset_button" 88;
 IO_PORT "reset_button" IO_TYPE=LVCMOS33 PULL_MODE=NONE PCI_CLAMP=OFF BANK_VCCIO=3.3;
 IO_LOC "clk_in" 10;

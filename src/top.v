@@ -28,6 +28,7 @@ In this SoC, slave (target) device has signals:
 module top (
             input wire        clk_in,  // Must be 27 MHz
             input wire        reset_button,
+            input wire        button2,
 `ifdef BOARD_20K
             output wire       ws2812b_din,
 `endif
@@ -56,12 +57,15 @@ module top (
    parameter ENABLE_DIV = 0;
    parameter ENABLE_FAST_MUL = 0;
    parameter ENABLE_COMPRESSED = 0;
-   parameter ENABLE_IRQ_QREGS = 0;
+   parameter ENABLE_IRQ = 1;
+   parameter ENABLE_IRQ_QREGS = 1;
+   parameter MASKED_IRQ = 32'hffff_fff0;
+   parameter LATCHED_IRQ = 32'hffff_ffff;
 
-   parameter          MEMBYTES = 4*(1 << SRAM_ADDR_WIDTH); 
+   parameter        MEMBYTES = 4*(1 << SRAM_ADDR_WIDTH); 
    parameter [31:0] STACKADDR = (MEMBYTES);         // Grows down.  Software should set it.
    parameter [31:0] PROGADDR_RESET = 32'h0000_0000;
-   parameter [31:0] PROGADDR_IRQ = 32'h0000_0000;
+   parameter [31:0] PROGADDR_IRQ = 32'h0000_0010;
 
    // This include gets SRAM_ADDR_WIDTH from software build process
    `include "sys_parameters.v"
@@ -100,6 +104,7 @@ module top (
    // default_sel causes a response when nothing else does
    wire                       default_sel;
    reg                        default_ready;
+   wire                       button2_pulse;
 
 `ifdef USE_LA
    // Assigns for external logic analyzer connction
@@ -264,6 +269,14 @@ module top (
       .leds_data_o(leds_data_o)
       );
 
+    edge_finder button2_finder
+      (
+         .clk(clk),
+         .reset_n(reset_n),
+         .sig_in(button2),
+         .pulse(button2_pulse)
+      );
+
    picorv32
      #(
        .STACKADDR(STACKADDR),
@@ -274,8 +287,10 @@ module top (
        .ENABLE_MUL(ENABLE_MUL),
        .ENABLE_DIV(ENABLE_DIV),
        .ENABLE_FAST_MUL(ENABLE_FAST_MUL),
-       .ENABLE_IRQ(1),
-       .ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS)
+       .ENABLE_IRQ(ENABLE_IRQ),
+       .ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS),
+       .MASKED_IRQ(MASKED_IRQ),
+       .LATCHED_IRQ(LATCHED_IRQ)
        ) cpu
        (
         .clk         (clk),
@@ -287,7 +302,7 @@ module top (
         .mem_wdata   (mem_wdata),
         .mem_wstrb   (mem_wstrb),
         .mem_rdata   (mem_rdata),
-        .irq         ('b0)
+        .irq         ({28'b0, button2_pulse, 3'b0})
         );
 
 endmodule // top
