@@ -6,54 +6,39 @@
 
 module edge_finder
 (
-   input wire  clk,
-   input wire  reset_n,
-   input wire  sig_in,
-   output reg  pulse
+ input wire clk,
+ input wire reset_n,
+ input wire sig_in,
+ output reg pulse
 );
 
 `include "global_defs.v"
 
-/* states */
-localparam AWAIT_LOW = 2'b00;
-localparam AWAIT_HIGH = 2'b01;
+   reg      sig_in_prev1;
+   reg      sig_in_prev2;
+   reg      sig_in_prev3;
 
-wire sig;
-reg state = AWAIT_LOW;
-
-`ifdef BOARD_20K
-   // Button on board is high when pressed
-   assign sig = sig_in;
-`endif
+   always @(posedge clk or negedge reset_n)
+     if (!reset_n) begin
+        sig_in_prev1 <= 1'b0; /* 9K will be OK with init to 0 */
+        sig_in_prev2 <= 1'b0; /* because many clocks occur prior */
+        sig_in_prev3 <= 1'b0; /* to interrupts being enabled */
+     end
+     else begin
+        sig_in_prev1 <= sig_in;  /* might be metastable */
 `ifdef BOARD_9K
-   // Button on board is low when pressed
-   assign sig = ~sig_in;
+        /* Tang Nano 9K is low when pressed */
+        sig_in_prev2 <= ~sig_in_prev1; /*stable */
 `endif
+`ifdef BOARD_20K
+        sig_in_prev2 <= sig_in_prev1; /*stable */
+`endif
+        sig_in_prev3 <= sig_in_prev2; /*stable */
 
-always @(posedge clk or negedge reset_n)
-   if (!reset_n) begin
-      state <= AWAIT_LOW;
-      pulse = 1'b0;
-   end
-   else
-      case (state)
-         AWAIT_LOW: begin
-            pulse <= 1'b0;
-            if (sig)
-               state <= AWAIT_LOW;
-            else
-               state <= AWAIT_HIGH;
-         end
-         AWAIT_HIGH: begin
-            if (sig) begin
-               state <= AWAIT_LOW;
-               pulse <= 1'b1;
-            end else begin
-                state <= AWAIT_HIGH;
-            end
-         end
-      endcase
-
+        if (sig_in_prev3 == 1'b0 && sig_in_prev2 == 1'b1)
+          pulse <= 1'b1;
+        else
+          pulse <= 1'b0;
+     end
+   
 endmodule
-
-
