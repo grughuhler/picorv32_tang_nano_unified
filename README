@@ -15,16 +15,30 @@ boards are supported.  Each has its own IDE project file, but many of
 the Verilog files (including top.v) are shared between the projects,
 sometimes using conditional compilation.
 
+Git Tags
+--------
+
+The purpose of this repository is to host code associated with YouTube
+videos.
+
+   Tag: picorv32_interrupts_update1
+   Video: https://youtu.be/49mK_JVVM_0
+   Purpose: Demo of interrupts on PicoRV32
+
+   Tag: pps_gps
+   Video: NOT THERE YET
+   Purpose: GPS pulse-per-second signal controls counter frequency
+   9K pins:  pps_in: 53, pps_pulse_out: 63, event_in: 42
+   20k pins: pps_in: 75, pps_pulse_out: 73, event_in: 77
+   9k clocks: clk_pps: 60 MHz, Fcount: 50 MHz
+   20k clocks: clk_pps: 120 MHz, Fcount: 100 MHz
+
 Quick Start
 -----------
 
-The git has Verilog files that contain prebuilt software.  Look at
-src/global_defs.v to see which board the build is for.  If it is
-not your board, you will have to rebuild the software.
-
-For the Tang Nano 9K, you should be able to just build and run the
-Verilog.  The Tang Nano 20K is a little more complicated due to its
-more flexible clock source.  See below.
+Open the project for your board, 9K or 20K.  Build in the Gowin IDE.  Load and
+run.  See YouTube video https://youtu.be/DaH2N7rSlpY (but this also refers to
+an older git and an older version of the Gowin tools).
 
 Components
 ----------
@@ -45,7 +59,7 @@ components which are:
   Tang Nano9K and TangNano20K.
 * A 32-bit count-down timer that can be read and written.
   It counts down to zero and stops.
-* A Gowin user flash controller implemented two ways:
+* A Gowin user flash controller (9K only) implemented two ways:
   - uflash.v uses the Gowin user flash controller soft
     IP block.  Clock speed limit = 50 MHz.
   - uflash_controller.v is a controller that I wrote. Clock
@@ -56,7 +70,8 @@ components which are:
   40.5 MHz (the latter being a slight overclocking for uflash.v).
   Note that only the Tang Nano 9K contains the user flash.
 * A controller for the ws2812b "neopixel" RGB LED that is only
-  only on the Tang Nano 20K
+  only on the Tang Nano 20K.
+* Controller for the pps_timer (at leat in tag pps_gps).
 
 Both the Verilog and the C code in this project are intended to be very
 simple and direct.  There are no integration abstractions.  The hope

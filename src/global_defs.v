@@ -1,1 +1,1 @@
-`define BOARD_9K
+`define BOARD_20K

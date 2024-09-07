@@ -85,7 +85,7 @@ module ws2812b #(parameter CLK_FREQ = 20e6)
            begin
               to_din <= 1'b1;
               if (cycle_counter > 'b0) begin
-                 cycle_counter <= cycle_counter - 1;
+                 cycle_counter <= cycle_counter - 15'b1;
                  state <= SEND_HI;
               end
               else begin
@@ -97,11 +97,11 @@ module ws2812b #(parameter CLK_FREQ = 20e6)
            begin
               to_din <= 1'b0;
               if (cycle_counter > 'b0) begin
-                 cycle_counter <= cycle_counter - 1;
+                 cycle_counter <= cycle_counter - 15'b1;
                  state <= SEND_LO;
               end
               else begin
-                 bit_counter <= bit_counter - 1;
+                 bit_counter <= bit_counter - 5'b1;
                  grb_val <= {grb_val[22:0], 1'b0};
                  state <= CHK_COUNT;
               end
@@ -110,7 +110,7 @@ module ws2812b #(parameter CLK_FREQ = 20e6)
            begin
               to_din <= 1'b0;
               if (cycle_counter > 'b0) begin
-                 cycle_counter <= cycle_counter - 1;
+                 cycle_counter <= cycle_counter - 15'b1;
                  state <= SEND_RES;
               end
               else begin

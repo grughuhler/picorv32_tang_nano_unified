@@ -70,7 +70,7 @@ OBJCOPY = riscv64-unknown-elf-objcopy
 OBJDUMP = riscv64-unknown-elf-objdump
 AS = riscv64-unknown-elf-as
 
-COMMON_CSRCS = main.c countdown_timer.c uart.c leds.c
+COMMON_CSRCS = main.c countdown_timer.c uart.c leds.c pps_timer.c
 
 NANO9K_CSRCS = uflash.c xorshift32.c
 NANO20K_CSRCS = ws2812b.c
@@ -111,8 +111,6 @@ conv_to_init: conv_to_init.c freq_search.c freq_search.h
 
 startup.o: startup.S
 	$(CC) $(CFLAGS) -DSRAM_ADDR_WIDTH=$(SRAM_ADDR_WIDTH) -c startup.S
-
-#/*	$(CC) $(ASFLAGS) -o startup.o startup.S*/
 
 prog_9k.elf: startup.o $(COMMON_CSRCS:.c=.o) $(NANO9K_CSRCS:.c=.o)
 	$(CC) $(CFLAGS) -Tlink_cmd.ld -o prog_9k.elf startup.o \

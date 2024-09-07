@@ -10,11 +10,17 @@
         <File path="src/gowin_rpll_20k/gowin_rpll.v" type="file.verilog" enable="1"/>
         <File path="src/leds.v" type="file.verilog" enable="1"/>
         <File path="src/picorv32.v" type="file.verilog" enable="1"/>
+        <File path="src/pps_module/fifo_from_pps.v" type="file.verilog" enable="1"/>
+        <File path="src/pps_module/fifo_to_pps.v" type="file.verilog" enable="1"/>
+        <File path="src/pps_module/gowin_rpll_pps_20k.v" type="file.verilog" enable="1"/>
+        <File path="src/pps_module/pps.v" type="file.verilog" enable="1"/>
+        <File path="src/pps_module/pps_wrapper.v" type="file.verilog" enable="1"/>
         <File path="src/reset.v" type="file.verilog" enable="1"/>
         <File path="src/simpleuart.v" type="file.verilog" enable="1"/>
         <File path="src/sram.v" type="file.verilog" enable="1"/>
         <File path="src/sram8bit.v" type="file.verilog" enable="1"/>
         <File path="src/top.v" type="file.verilog" enable="1"/>
+        <File path="src/two_flop_sync.v" type="file.verilog" enable="1"/>
         <File path="src/uart_wrap.v" type="file.verilog" enable="1"/>
         <File path="src/ws2812b.v" type="file.verilog" enable="1"/>
         <File path="src/ws2812b_tgt.v" type="file.verilog" enable="1"/>

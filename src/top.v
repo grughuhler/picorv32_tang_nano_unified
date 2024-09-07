@@ -29,6 +29,9 @@ module top (
             input wire        clk_in,  // Must be 27 MHz
             input wire        reset_button,
             input wire        button2,
+            input wire        event_in,
+            input wire        pps_in,
+            output wire       pps_pulse_out,
 `ifdef BOARD_20K
             output wire       ws2812b_din,
 `endif
@@ -59,7 +62,7 @@ module top (
    parameter ENABLE_COMPRESSED = 0;
    parameter ENABLE_IRQ = 1;
    parameter ENABLE_IRQ_QREGS = 1;
-   parameter MASKED_IRQ = 32'hffff_fff0;
+   parameter MASKED_IRQ = 32'hffff_ffc0;
    parameter LATCHED_IRQ = 32'hffff_ffff;
 
    parameter        MEMBYTES = 4*(1 << SRAM_ADDR_WIDTH); 
@@ -101,10 +104,15 @@ module top (
    wire                       ws2812b_sel;
    wire                       ws2812b_ready;
 `endif
+   wire                       pps_timer_sel;
+   wire                       pps_timer_ready;
+   wire [31:0]                pps_timer_data_o;
    // default_sel causes a response when nothing else does
    wire                       default_sel;
    reg                        default_ready;
    wire                       button2_pulse;
+   wire                       pps_irq;
+   wire                       event_irq;
 
 `ifdef USE_LA
    // Assigns for external logic analyzer connction
@@ -120,18 +128,19 @@ module top (
 `endif
 
    // Set clk's frequency to CLK_FREQ from c_code/Makefile
-   Gowin_rPLL #(.IDIV_SEL(IDIV_SEL), .FBDIV_SEL(FBDIV_SEL), .ODIV_SEL(ODIV_SEL)) (
+   Gowin_rPLL #(.IDIV_SEL(IDIV_SEL), .FBDIV_SEL(FBDIV_SEL), .ODIV_SEL(ODIV_SEL)) rpll_clock (
       .clkout(clk),
       .clkin(clk_in)
    );
 
    // Establish memory map for all slaves:
-   //    SRAM 00000000 - 0001ffff
-   //  uflash 00020000 - 00032fff  (9K only)
-   //    LED  80000000
-   //    UART 80000008 - 8000000f
-   //    CDT  80000010 - 80000013
-   // ws2812b 80000020 - 80000023  (20k only)
+   //    SRAM   00000000 - 0001ffff
+   //  uflash   00020000 - 00032fff  (9K only)
+   //    LED    80000000
+   //    UART   80000008 - 8000000f
+   //    CDT    80000010 - 80000013
+   // ws2812b   80000020 - 80000023  (20k only)
+   // pps_timer 80000040 - 8000005b
 
    assign sram_sel = mem_valid && (mem_addr < MEMBYTES);
 `ifdef BOARD_9K
@@ -143,6 +152,7 @@ module top (
 `ifdef BOARD_20K
    assign ws2812b_sel = mem_valid && (mem_addr == 32'h80000020);
 `endif
+   assign pps_timer_sel = mem_valid && ((mem_addr >= 32'h8000_0040) && (mem_addr < 32'h8000_005b));
 
    // Core can proceed based on which slave was targetted and is now ready.
    assign mem_ready = mem_valid &
@@ -153,6 +163,7 @@ module top (
 `ifdef BOARD_20K
         ws2812b_ready |
 `endif
+        pps_timer_ready |
         default_ready);
 
    // Select which slave's output data is to be fed to core.
@@ -162,6 +173,7 @@ module top (
 `ifdef BOARD_9K
                       uflash_sel  ? uflash_data_o :
 `endif
+                      pps_timer_sel ? pps_timer_data_o :
                       cdt_sel     ? cdt_data_o  : 32'hdeadbeef;
 
    assign leds = ~leds_data_o[5:0]; // Connect to the LEDs off the FPGA
@@ -176,7 +188,7 @@ module top (
 `ifdef BOARD_20K
                        ~ws2812b_sel &
 `endif
-                       ~cdt_sel;
+                       ~cdt_sel & ~pps_timer_sel;
 
    always @(posedge clk or negedge reset_n)
      if (!reset_n)
@@ -269,12 +281,57 @@ module top (
       .leds_data_o(leds_data_o)
       );
 
-    edge_finder button2_finder
+`ifdef BOARD_9K
+    /* Tang Nano 9K button goes low when pressed */
+    falling_edge_finder button2_finder
       (
          .clk(clk),
          .reset_n(reset_n),
          .sig_in(button2),
          .pulse(button2_pulse)
+      );
+`else
+    rising_edge_finder button2_finder
+      (
+         .clk(clk),
+         .reset_n(reset_n),
+         .sig_in(button2),
+         .pulse(button2_pulse)
+      );
+`endif
+
+    pps_wrapper pps_wrapper0
+      (
+         .clk_in(clk_in),
+         .clk(clk),
+         .reset_n(reset_n),
+         .sel(pps_timer_sel),
+         .addr(mem_addr[4:2]),
+         .is_write(|mem_wstrb), /* word accesses only */
+         .data_i(mem_wdata),
+         .ready(pps_timer_ready),
+         .data_o(pps_timer_data_o),
+         .event_in(event_in),
+         .pps_in(pps_in),
+         .pps_pulse_out(pps_pulse_out)
+      );
+
+    /* Convert pps_in and event_in to an edge pulse like per button2 */
+
+    rising_edge_finder pps_irq_finder
+      (
+         .clk(clk),
+         .reset_n(reset_n),
+         .sig_in(pps_in),
+         .pulse(pps_irq)
+      );
+
+    rising_edge_finder event_irq_finder
+      (
+         .clk(clk),
+         .reset_n(reset_n),
+         .sig_in(event_in),
+         .pulse(event_irq)
       );
 
    picorv32
@@ -302,7 +359,7 @@ module top (
         .mem_wdata   (mem_wdata),
         .mem_wstrb   (mem_wstrb),
         .mem_rdata   (mem_rdata),
-        .irq         ({28'b0, button2_pulse, 3'b0})
+        .irq         ({26'b0, event_irq, pps_irq, button2_pulse, 3'b0})
         );
 
 endmodule // top

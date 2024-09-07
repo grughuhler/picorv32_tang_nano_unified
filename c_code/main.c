@@ -9,6 +9,7 @@
 #include "uart.h"
 #include "countdown_timer.h"
 #include "readtime.h"
+#include "pps_timer.h"
 #if defined(BOARD_9K)
 #include "uflash.h"
 #include "xorshift32.h"
@@ -21,10 +22,36 @@
 extern unsigned int timer_instr(unsigned int val);   /* from startup.S */
 extern unsigned int maskirq_instr(unsigned int val); /* from startup.S */
 
+/* These defines are associated with the pps_timer.
+ *    ACCUM_INCR_NOMINAL = 0xd5555555 is correct for a 120 MHz clk_pps
+ *         and a 100 MHz Fcount clock, i.e. a ratio of 1.2.
+ *    PPS_COUNT_VALUE = 0x5f5e100 gives a 1 second PPS period also
+ *         assuming a 100 MHz Fcount clock.  0x5f5e100 is 100e6.
+ *    PPS_TARGET_HZ = 1000000000 is based on the timestamps being in
+ *         nanosecond.  This matches with time_incr value of 10 hardcoded
+ *         in pps.v.
+ */
+
+#define ACCUM_INCR_NOMINAL 0xd5555555
+#define PPS_TARGET_HZ 1000000000
+
+#if defined(BOARD_20K)
+#define PPS_COUNT_VALUE 100000
+#elif defined(BOARD_9K)
+#define PPS_COUNT_VALUE 50000
+#endif
+
+unsigned long long last_ts;
 unsigned int timer_irq_count;
 unsigned int illegal_irq_count;
 unsigned int buserr_irq_count;
 unsigned int irq3_count;
+unsigned int pps_irq_count; // IRQ 4
+unsigned int event_irq_count; // IRQ 5
+unsigned char inhibit_pps_printing;
+unsigned char inhibit_pps_updating;
+unsigned int accum_incr;
+
 
 #define MEMSIZE 512
 unsigned int mem[MEMSIZE];
@@ -303,6 +330,11 @@ void help(void)
   uart_puts("af            : erase all uflash\r\n");
   uart_puts("wf            : write all uflash\r\n");
 #endif
+  uart_puts("ix            : toggle pps printing\r\n");
+  uart_puts("iu            : toggle pps updating\r\n");
+  uart_puts("ia            : set pps accum_incr\r\n");
+  uart_puts("ip            : set pps pps_count\r\n");
+  uart_puts("it            : read pps timestamp\r\n");
   uart_puts("et            : endian test\r\n");
   uart_puts("rl            : read LEDs\r\n");
   uart_puts("il            : increment LEDs\r\n");
@@ -383,6 +415,121 @@ void change_ws2812b(unsigned int value)
 }
 #endif
 
+/* accum_incr
+ *
+ * Return new value for accum_incr based on
+ *  - The current accum_incr
+ *  - The target period (i.e. expected) signal period.
+ *  - The observed period which if not equal to the target represents
+ *    error in the time_ctr counting rate.
+ */
+
+unsigned int adjust(unsigned long long accum_incr,
+		    unsigned long long target_period,
+		    unsigned long long observed_period)
+{
+  unsigned int new_accum_incr;
+
+  /* The /4 is to slow the changes to accum_incr to avoid chasing noise */
+
+  if (observed_period >= target_period)
+    observed_period = target_period + (observed_period - target_period)/4;
+  else
+    observed_period = target_period - (target_period - observed_period)/4;
+  
+  new_accum_incr = (accum_incr*target_period)/observed_period;
+
+  return new_accum_incr;
+}
+
+
+void process_pps()
+{
+  unsigned long long ts;
+  unsigned long long diff;
+  unsigned int observed_period, new_accum_incr, diff_ideal;
+  unsigned char diff_ideal_sign, do_update;
+
+  ts = pps_get_timestamp();
+
+  /* Some checks are needed to avoid convergence problems.  One can
+   * get junk readings from the GPS when it is aquiring a fix.  Also,
+   * it can miss pulses if reception is not good.
+   * Also, trying to go faster than clk_pps results in overflow in
+   * The adjust function.  It's a good idea to process only observed periods
+   * that are plausible.
+   */
+
+  if (ts <= last_ts) {
+    /* Reject negative period */
+    do_update = 0;
+  } else {
+    diff = ts - last_ts;
+    /* reject periods that are not plausible */
+    if ((diff < 990000000LL) || (diff >= 1100000000LL)) {
+      do_update = 0;
+    } else {
+      do_update = 1;
+    }
+  }
+
+  last_ts = ts;
+  observed_period = diff;
+  
+  if (!inhibit_pps_updating && do_update) {
+    accum_incr = adjust(accum_incr, PPS_TARGET_HZ, observed_period);
+    pps_set_accum_incr(accum_incr);
+  }
+
+  if (!inhibit_pps_printing) {
+
+    if (observed_period >= PPS_TARGET_HZ) {
+      diff_ideal = observed_period - PPS_TARGET_HZ;
+      diff_ideal_sign = 0;
+    } else {
+      diff_ideal = PPS_TARGET_HZ - observed_period;
+      diff_ideal_sign = 1;
+    }
+
+    uart_puts("Obs Period: ");
+    uart_print_hex(observed_period);
+    uart_puts(", err: ");
+    if (diff_ideal_sign)
+      uart_puts("-");
+    else
+      uart_puts(" ");
+    uart_print_hex(diff_ideal);
+    uart_puts(", new accum_incr: ");
+    uart_print_hex(accum_incr);
+    if (do_update == 0)
+      uart_puts(" no update\r\n");
+    else
+      uart_puts("\r\n");
+  }
+}
+
+void toggle_pps_printing(void)
+{
+  inhibit_pps_printing = 1 - inhibit_pps_printing;
+}
+
+void toggle_pps_updating(void)
+{
+  inhibit_pps_updating = 1 - inhibit_pps_updating;
+}
+
+void pps_read_timestamp(void)
+{
+  long long ts;
+  unsigned int *p = (unsigned int *) &ts;
+
+  ts = pps_get_timestamp();
+  uart_puts("timestamp: ");
+  uart_print_hex(*(p+1));
+  uart_print_hex(*p);
+  uart_puts("\r\n");
+}
+
 unsigned int *irq(unsigned int *regs, unsigned int irqs)
 {
   if ((irqs & 1) != 0) {
@@ -401,6 +548,15 @@ unsigned int *irq(unsigned int *regs, unsigned int irqs)
     irq3_count++;
   }
 
+  if ((irqs & 16) != 0) {
+    pps_irq_count++;
+    process_pps();
+  }
+
+  if ((irqs & 32) != 0) {
+    event_irq_count++;
+  }
+
   return regs;
 }
 
@@ -414,6 +570,10 @@ void print_irq_counts(void)
   uart_print_hex(buserr_irq_count);
   uart_puts("\r\nIRQ3: ");
   uart_print_hex(irq3_count);
+  uart_puts("\r\nPPS: ");
+  uart_print_hex(pps_irq_count);
+  uart_puts("\r\nevent: ");
+  uart_print_hex(event_irq_count);
   uart_puts("\r\n");
 }
 
@@ -476,6 +636,11 @@ struct command {
   {"af", 0, .u.func0=erase_all_flash},
   {"wf", 0, .u.func0=write_all_flash},
 #endif
+  {"ix", 0, .u.func0=toggle_pps_printing},
+  {"iu", 0, .u.func0=toggle_pps_updating},
+  {"ia", 1, .u.func1=pps_set_accum_incr},
+  {"ip", 1, .u.func1=pps_set_pps_count},
+  {"it", 0, .u.func0=pps_read_timestamp},
   {"et", 0, .u.func0=endian_test},
   {"rl", 0, .u.func0=read_led},
   {"il", 0, .u.func0=incr_led},
@@ -602,6 +767,15 @@ int main()
   
   set_leds(6);
 
+  accum_incr = ACCUM_INCR_NOMINAL;
+  pps_set_accum_incr(accum_incr);
+  pps_set_pps_count(PPS_COUNT_VALUE);
+  last_ts = 0LL;
+  event_irq_count = 0;
+  pps_irq_count = 0;
+  inhibit_pps_printing = 0;
+  inhibit_pps_updating = 0;
+  
   timer_irq_count = 0;
   illegal_irq_count = 0;
   buserr_irq_count = 0;

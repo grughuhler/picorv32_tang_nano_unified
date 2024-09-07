@@ -87,7 +87,7 @@ module uflash #(parameter CLK_FREQ=5400000)
         erase <= 1'b0;
         nvstr <= 1'b0;
         prog <= 1'b0;
-        cycle_count <= 'd0;
+        cycle_count <= 24'd0;
      end
      else
        case (state)
@@ -135,7 +135,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          ERASE2: begin
             if (cycle_count < E2_CLKS) begin
                state <= ERASE2;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= ERASE3;
@@ -146,7 +146,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          ERASE3: begin
             if (cycle_count < E3_CLKS) begin
                state <= ERASE3;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= ERASE4;
@@ -157,7 +157,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          ERASE4: begin
             if (cycle_count < E4_CLKS) begin
                state <= ERASE4;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= ERASE5;
@@ -168,7 +168,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          ERASE5: begin
             if (cycle_count < E5_CLKS) begin
                state <= ERASE5;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= DONE;
@@ -183,7 +183,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          WRITE2: begin
             if (cycle_count < W2_CLKS) begin
                state <= WRITE2;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= WRITE3;
@@ -194,7 +194,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          WRITE3: begin
             if (cycle_count < W3_CLKS) begin
                state <= WRITE3;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= WRITE4;
@@ -205,7 +205,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          WRITE4: begin
             if (cycle_count < W4_CLKS) begin
                state <= WRITE4;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= WRITE5;
@@ -220,7 +220,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          WRITE6: begin
             if (cycle_count < W6_CLKS) begin
                state <= WRITE6;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= WRITE7;
@@ -231,7 +231,7 @@ module uflash #(parameter CLK_FREQ=5400000)
          WRITE7: begin
             if (cycle_count < W7_CLKS) begin
                state <= WRITE7;
-               cycle_count <= cycle_count + 1;
+               cycle_count <= cycle_count + 24'b1;
             end
             else begin
                state <= DONE;
