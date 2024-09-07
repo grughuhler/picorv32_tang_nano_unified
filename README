@@ -26,7 +26,7 @@ videos.
    Purpose: Demo of interrupts on PicoRV32
 
    Tag: pps_gps
-   Video: NOT THERE YET
+   Video: https://youtu.be/dAa5hcjiqz0
    Purpose: GPS pulse-per-second signal controls counter frequency
    9K pins:  pps_in: 53, pps_pulse_out: 63, event_in: 42
    20k pins: pps_in: 75, pps_pulse_out: 73, event_in: 77
@@ -36,7 +36,11 @@ videos.
 Quick Start
 -----------
 
-Open the project for your board, 9K or 20K.  Build in the Gowin IDE.  Load and
+Software: see c_code/README.  Build software before Verilog.
+
+Verilog: Open the project for your board, 9K or 20K.
+
+Build in the Gowin IDE.  Load and
 run.  See YouTube video https://youtu.be/DaH2N7rSlpY (but this also refers to
 an older git and an older version of the Gowin tools).
 
